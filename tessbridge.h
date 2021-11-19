@@ -26,6 +26,7 @@ int Init(TessBaseAPI, char*, char*, char*, char*);
 struct bounding_boxes* GetBoundingBoxes(TessBaseAPI, int);
 struct bounding_boxes* GetBoundingBoxesVerbose(TessBaseAPI);
 bool SetVariable(TessBaseAPI, char*, char*);
+int PdfOutput(char*, char*);
 void SetPixImage(TessBaseAPI a, PixImage pix);
 void SetPageSegMode(TessBaseAPI, int);
 int GetPageSegMode(TessBaseAPI);

@@ -151,6 +151,16 @@ func (client *Client) SetImageFromBytes(data []byte) error {
 	return nil
 }
 
+func PdfOutput(input string, output string) error {
+	_input := C.CString(input)
+	_output := C.CString(output)
+	err := C.PdfOutput(_input, _output)
+
+	fmt.Println(err)
+
+	return nil
+}
+
 // SetLanguage sets languages to use. English as default.
 func (client *Client) SetLanguage(langs ...string) error {
 	if len(langs) == 0 {

@@ -28,8 +28,12 @@ RUN apt-get install -y -qq \
 # If you want to download these traineddata via `wget`, don't forget to locate
 # downloaded traineddata under ${TESSDATA_PREFIX}/tessdata.
 
-RUN go get -t github.com/otiai10/gosseract
-RUN cd ${GOPATH}/src/github.com/otiai10/gosseract && go test
+# RUN go get -t github.com/otiai10/gosseract
+# RUN cd ${GOPATH}/src/github.com/otiai10/gosseract && go test
 
 # Now, you've got complete environment to play with "gosseract"!
 # For other OS, check https://github.com/otiai10/gosseract/tree/main/test/runtimes
+COPY . /usr/local/go/src/gosseract/
+
+WORKDIR /tmp/
+CMD ["go", "run", "main.go"]

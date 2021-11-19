@@ -4,6 +4,7 @@
 #else
 #include <leptonica/allheaders.h>
 #include <tesseract/baseapi.h>
+#include <tesseract/renderer.h>
 #endif
 
 #include <stdio.h>
@@ -73,6 +74,42 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
 bool SetVariable(TessBaseAPI a, char* name, char* value) {
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
     return api->SetVariable(name, value);
+}
+
+int PdfOutput(char* input, char* output) {
+    tesseract::TessBaseAPI *api = new tesseract::TessBaseAPI();
+    if (api->Init("/usr/share/tesseract-ocr/4.00/tessdata", "deu", tesseract::OEM_DEFAULT)) {
+        fprintf(stderr, "Could not initialize tesseract.\n");
+        return 1;
+    }
+
+    PIX *sourceImg100 = pixRead(input);
+    if (!sourceImg100) {
+      fprintf(stderr, "Leptonica can't process input file: %s\n", input);
+      return 2;
+    }
+    api->SetImage(sourceImg100);
+    api->SetInputName(input);
+    api->SetOutputName(output);
+
+    tesseract::TessPDFRenderer *renderer = new tesseract::TessPDFRenderer(
+              output, "/usr/share/tesseract-ocr/4.00/tessdata", false);
+
+    if (!renderer->happy()) {
+         printf("Error, could not create PDF output file: %s\n",
+                strerror(errno));
+         delete renderer;
+         return 3;
+    }
+
+    bool succeed = api->ProcessPages(input, nullptr, 0, renderer);
+    if (!succeed) {
+      fprintf(stderr, "Error during processing.\n");
+      return 4;
+    }
+    api->End();
+    pixDestroy(&sourceImg100);
+    return 0;
 }
 
 void SetPixImage(TessBaseAPI a, PixImage pix) {
