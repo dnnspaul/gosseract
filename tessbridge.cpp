@@ -9,7 +9,10 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <memory>
 #include "tessbridge.h"
+#include <chrono>
+#include <thread>
 
 TessBaseAPI Create() {
     tesseract::TessBaseAPI* api = new tesseract::TessBaseAPI();
@@ -76,40 +79,133 @@ bool SetVariable(TessBaseAPI a, char* name, char* value) {
     return api->SetVariable(name, value);
 }
 
+void tprintf(const char *format, ...) {
+  const char *debug_file_name = "logfile";
+  static FILE *debugfp = nullptr; // debug file
+
+  if (debug_file_name == nullptr) {
+    // This should not happen.
+    return;
+  }
+
+#ifdef _WIN32
+  // Replace /dev/null by nul for Windows.
+  if (strcmp(debug_file_name, "/dev/null") == 0) {
+    debug_file_name = "nul";
+    debug_file.set_value(debug_file_name);
+  }
+#endif
+
+  if (debugfp == nullptr && debug_file_name[0] != '\0') {
+    debugfp = fopen(debug_file_name, "wb");
+  } else if (debugfp != nullptr && debug_file_name[0] == '\0') {
+    fclose(debugfp);
+    debugfp = nullptr;
+  }
+
+  va_list args;           // variable args
+  va_start(args, format); // variable list
+  if (debugfp != nullptr) {
+    vfprintf(debugfp, format, args);
+  } else {
+    vfprintf(stderr, format, args);
+  }
+  va_end(args);
+}
+
 int PdfOutput(char* input, char* output) {
-    tesseract::TessBaseAPI *api = new tesseract::TessBaseAPI();
-    if (api->Init("/usr/share/tesseract-ocr/4.00/tessdata", "deu", tesseract::OEM_DEFAULT)) {
+    static tesseract::TessBaseAPI api;
+
+    api.SetOutputName(output);
+
+    // tesseract::TessBaseAPI *api = new tesseract::TessBaseAPI();
+    if (api.Init("/usr/share/tessdata/", "deu", tesseract::OEM_DEFAULT)) {
         fprintf(stderr, "Could not initialize tesseract.\n");
         return 1;
     }
+
+    api.SetPageSegMode(tesseract::PSM_AUTO);
+    api.SetVariable("user_defined_dpi", "70");
+    api.SetVariable("tessedit_create_pdf", "true");
+    api.SetVariable("tessedit_create_hocr", "true");
+    api.SetVariable("tessedit_create_alto", "true");
+    api.SetInputName(input);
 
     PIX *sourceImg100 = pixRead(input);
     if (!sourceImg100) {
       fprintf(stderr, "Leptonica can't process input file: %s\n", input);
       return 2;
     }
-    api->SetImage(sourceImg100);
-    api->SetInputName(input);
-    api->SetOutputName(output);
+    PIX *sourceImage200 = pixRead(input);
+    if (!sourceImage200) {
+      fprintf(stderr, "Leptonica can't process input file: %s\n", input);
+      return 2;
+    }
 
-    tesseract::TessPDFRenderer *renderer = new tesseract::TessPDFRenderer(
-              output, "/usr/share/tesseract-ocr/4.00/tessdata", false);
+    // int ret_val = EXIT_SUCCESS;
+
+    // tesseract::Orientation orientation;
+    // tesseract::WritingDirection direction;
+    // tesseract::TextlineOrder order;
+    // float deskew_angle;
+
+    // const tesseract::PageIterator* it = api.AnalyseLayout();
+
+    // if (it) {
+    //   // TODO: Implement output of page segmentation, see documentation
+    //   // ("Automatic page segmentation, but no OSD, or OCR").
+    //   it->Orientation(&orientation, &direction, &order, &deskew_angle);
+    //   tprintf(
+    //       "Orientation: %d\nWritingDirection: %d\nTextlineOrder: %d\n"
+    //       "Deskew angle: %.4f\n",
+    //       orientation, direction, order, deskew_angle);
+    // } else {
+    //   ret_val = EXIT_FAILURE;
+    //   fprintf(stderr, "ret_val err");
+    // }
+
+    // FILE *fout = stdout;
+    // fprintf(stdout, "Tesseract parameters:\n");
+    // api.PrintVariables(fout);
+    // auto renderer = tesseract::TessPDFRenderer(output, api.GetDatapath(), false);
+
+    auto* renderer =
+        new tesseract::TessPDFRenderer(output, api.GetDatapath(),
+                                       false);
 
     if (!renderer->happy()) {
          printf("Error, could not create PDF output file: %s\n",
                 strerror(errno));
          delete renderer;
          return 3;
+    } else {
+        // renderer->title = "Document Title"
+        // renderer->BeginDocument("Document Title");
+        // bool succeed = api.ProcessPages(input, nullptr, 0, renderer);
+        // renderer->EndDocument();
+        
+        bool bd = renderer->BeginDocument("Document Title");
+        if (!bd) {
+            fprintf(stderr, "begindocument failed");
+        }
+        
+        bool succeed = api.ProcessPage(sourceImg100, 0, input, "", 0, renderer);
+        
+        bool ed = renderer->EndDocument();
+        if (!ed) {
+            fprintf(stderr, "enddocument failed");
+        }
+        // renderer->EndDocument();
+        if (!succeed) {
+            fprintf(stderr, "Error during processing.\n");
+            return 4;
+        }
+        fprintf(stderr, "wat is hier los\n");
+        api.End();
+        pixDestroy(&sourceImg100);
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+        return 1337;
     }
-
-    bool succeed = api->ProcessPages(input, nullptr, 0, renderer);
-    if (!succeed) {
-      fprintf(stderr, "Error during processing.\n");
-      return 4;
-    }
-    api->End();
-    pixDestroy(&sourceImg100);
-    return 0;
 }
 
 void SetPixImage(TessBaseAPI a, PixImage pix) {

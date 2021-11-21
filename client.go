@@ -154,9 +154,9 @@ func (client *Client) SetImageFromBytes(data []byte) error {
 func PdfOutput(input string, output string) error {
 	_input := C.CString(input)
 	_output := C.CString(output)
-	err := C.PdfOutput(_input, _output)
+	ret := C.PdfOutput(_input, _output)
 
-	fmt.Println(err)
+	fmt.Println(ret)
 
 	return nil
 }
