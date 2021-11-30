@@ -4,6 +4,7 @@
 #else
 #include <leptonica/allheaders.h>
 #include <tesseract/baseapi.h>
+#include <tesseract/renderer.h>
 #endif
 
 #include <stdio.h>
