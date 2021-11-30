@@ -68,6 +68,9 @@ type Client struct {
 	// internal flag to check if the instance should be initialized again
 	// i.e, we should create a new gosseract client when language or config file change
 	shouldInit bool
+
+	// saving TessPDFRenderer in struct on initialization in PdfOutputBegin() func
+	renderer C.TessPDFRenderer
 }
 
 // NewClient construct new Client. It's due to caller to Close this client.
@@ -147,6 +150,40 @@ func (client *Client) SetImageFromBytes(data []byte) error {
 
 	img := C.CreatePixImageFromBytes((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)))
 	client.pixImage = img
+
+	return nil
+}
+
+func (client *Client) PdfOutputBegin(output string, tessdata string) error {
+	if client.api == nil {
+		return fmt.Errorf("TessBaseAPI is not constructed, please use `gosseract.NewClient`")
+	}
+
+	client.init()
+
+	renderer := C.PdfOutputBegin(client.api, C.CString(output), C.CString(tessdata))
+
+	client.renderer = renderer
+
+	return nil
+}
+
+func (client *Client) PdfAddFile(img []byte, page int) error {
+	if client.api == nil {
+		return fmt.Errorf("TessBaseAPI is not constructed, please use `gosseract.NewClient`")
+	}
+
+	if client.renderer == nil {
+		return fmt.Errorf("Renderer is not constructed, please use `client.PdfOutputBegin`")
+	}
+
+	C.PdfAddPage(client.api, client.renderer, (*C.uchar)(unsafe.Pointer(&img[0])), C.int(len(img)), C.int(page))
+
+	return nil
+}
+
+func (client *Client) PdfOutputEnd() error {
+	C.PdfOutputEnd(client.api, client.renderer)
 
 	return nil
 }

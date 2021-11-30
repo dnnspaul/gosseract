@@ -3,6 +3,7 @@ extern "C" {
 #endif
 
 typedef void* TessBaseAPI;
+typedef void* TessPDFRenderer;
 typedef void* PixImage;
 
 struct bounding_box {
@@ -26,6 +27,11 @@ int Init(TessBaseAPI, char*, char*, char*, char*);
 struct bounding_boxes* GetBoundingBoxes(TessBaseAPI, int);
 struct bounding_boxes* GetBoundingBoxesVerbose(TessBaseAPI);
 bool SetVariable(TessBaseAPI, char*, char*);
+
+TessPDFRenderer PdfOutputBegin(TessBaseAPI, char*, char*);
+int PdfAddPage(TessBaseAPI, TessPDFRenderer, unsigned char*, int, int);
+int PdfOutputEnd(TessBaseAPI, TessPDFRenderer);
+
 void SetPixImage(TessBaseAPI a, PixImage pix);
 void SetPageSegMode(TessBaseAPI, int);
 int GetPageSegMode(TessBaseAPI);

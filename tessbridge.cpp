@@ -37,7 +37,7 @@ void ClearPersistentCache(TessBaseAPI a) {
 
 int Init(TessBaseAPI a, char* tessdataprefix, char* languages) {
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
-    return api->Init(tessdataprefix, languages);
+    return api->Init(tessdataprefix, languages, tesseract::OEM_LSTM_ONLY);
 }
 
 int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilepath, char* errbuf) {
@@ -57,7 +57,7 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
         int configs_size = 1;
         ret = api->Init(tessdataprefix, languages, tesseract::OEM_DEFAULT, configs, configs_size, NULL, NULL, false);
     } else {
-        ret = api->Init(tessdataprefix, languages);
+        ret = api->Init(tessdataprefix, languages, tesseract::OEM_LSTM_ONLY);
     }
 
     // {{{ Restore default stderr
@@ -73,6 +73,82 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
 bool SetVariable(TessBaseAPI a, char* name, char* value) {
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
     return api->SetVariable(name, value);
+}
+
+void tprintf(const char *format, ...) {
+  const char *debug_file_name = "logfile";
+  static FILE *debugfp = nullptr; // debug file
+
+  if (debug_file_name == nullptr) {
+    // This should not happen.
+    return;
+  }
+
+#ifdef _WIN32
+  // Replace /dev/null by nul for Windows.
+  if (strcmp(debug_file_name, "/dev/null") == 0) {
+    debug_file_name = "nul";
+    debug_file.set_value(debug_file_name);
+  }
+#endif
+
+  if (debugfp == nullptr && debug_file_name[0] != '\0') {
+    debugfp = fopen(debug_file_name, "wb");
+  } else if (debugfp != nullptr && debug_file_name[0] == '\0') {
+    fclose(debugfp);
+    debugfp = nullptr;
+  }
+
+  va_list args;           // variable args
+  va_start(args, format); // variable list
+  if (debugfp != nullptr) {
+    vfprintf(debugfp, format, args);
+  } else {
+    vfprintf(stderr, format, args);
+  }
+  va_end(args);
+}
+
+TessPDFRenderer PdfOutputBegin(TessBaseAPI a, char* output, char* tessdata) {
+    tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
+
+    api->SetOutputName(output);
+
+    tesseract::TessPDFRenderer* renderer = new tesseract::TessPDFRenderer(output, tessdata);
+    
+    renderer->BeginDocument("Blumo PDF Document");
+
+    return (void*)renderer;
+}
+
+int PdfAddPage(TessBaseAPI a, TessPDFRenderer r, unsigned char* img, int imgsize, int page) {
+    tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
+    tesseract::TessPDFRenderer* renderer = (tesseract::TessPDFRenderer*)r;
+    
+    Pix* image = pixReadMem(img, (size_t)imgsize);
+    Pix* sourceImg = (Pix*)image;
+
+    if (!sourceImg) {
+        return EXIT_FAILURE;
+    }
+
+    // keep filename empty, otherwise tesseract is looking for file?
+    // ERROR:
+    // Error in fopenReadStream: file not found
+    // Error in findFileFormat: image file not found
+    // Warning in l_generateCIDataForPdf: file file.jpg format is unknown
+    int succ = api->ProcessPage(sourceImg, page, nullptr, nullptr, 0, renderer);
+    pixDestroy(&sourceImg);
+
+    return 0;
+}
+
+int PdfOutputEnd(TessBaseAPI a, TessPDFRenderer r) {
+    tesseract::TessPDFRenderer* renderer = (tesseract::TessPDFRenderer*)r;
+
+    renderer->EndDocument();
+
+    return 0;
 }
 
 void SetPixImage(TessBaseAPI a, PixImage pix) {
