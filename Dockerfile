@@ -1,7 +1,7 @@
 #####
 # This is a working example of setting up tesseract/gosseract,
 # and also works as an example runtime to use gosseract package.
-# You can just hit `docker run -it --rm otiai10/gosseract`
+# You can just hit `docker run -it --rm dennispaul/gosseract`
 # to try and check it out!
 #####
 FROM golang:latest

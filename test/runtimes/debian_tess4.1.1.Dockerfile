@@ -9,8 +9,8 @@ RUN apt-get install -y \
 
 ENV GOPATH=/root/go
 
-ADD . ${GOPATH}/src/github.com/otiai10/gosseract
-WORKDIR ${GOPATH}/src/github.com/otiai10/gosseract
+ADD . ${GOPATH}/src/github.com/dennispaul/gosseract
+WORKDIR ${GOPATH}/src/github.com/dennispaul/gosseract
 
 RUN tesseract --version
 

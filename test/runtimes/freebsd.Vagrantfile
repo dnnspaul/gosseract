@@ -11,11 +11,11 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision :shell, :inline => '
     mkdir -p $GOPATH/src/github.com/otiai10
-    cp -r /vagrant $GOPATH/src/github.com/otiai10/gosseract
+    cp -r /vagrant $GOPATH/src/github.com/dennispaul/gosseract
     pkg install -y --quiet tesseract git go
     mv /usr/local/share/tessdata/*.traineddata /tmp
     mv /tmp/eng.traineddata /usr/local/share/tessdata/
-    cd $GOPATH/src/github.com/otiai10/gosseract
+    cd $GOPATH/src/github.com/dennispaul/gosseract
     go test -v -cover ./...
     echo $? > /vagrant/test/runtimes/TESTRESULT.freebsd.txt
   ', :env => {

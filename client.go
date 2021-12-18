@@ -244,7 +244,7 @@ func (client *Client) SetVariable(key SettableVariable, value string) error {
 
 // SetPageSegMode sets "Page Segmentation Mode" (PSM) to detect layout of characters.
 // See official documentation for PSM here https://github.com/tesseract-ocr/tesseract/wiki/ImproveQuality#page-segmentation-method
-// See https://github.com/otiai10/gosseract/issues/52 for more information.
+// See https://github.com/dennispaul/gosseract/issues/52 for more information.
 func (client *Client) SetPageSegMode(mode PageSegMode) error {
 	C.SetPageSegMode(client.api, C.int(mode))
 	return nil
